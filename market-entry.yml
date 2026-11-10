@@ -1,0 +1,11 @@
+# 提交到 awesome-dsh-plugin 的条目模板（占位符替换成你的 GitHub 账号/仓库名）
+# 放到 awesome-dsh-plugin 仓库的 data/plugins/<owner>__dsh-net-hosts.yml
+url: https://github.com/<owner>/dsh-net-hosts
+name: <owner>/dsh-net-hosts
+category: dev
+description:
+  en: 'Shows which hosts each local app connects to, restoring domain names through the local Clash/mihomo proxy and recording first/last-seen times to the second.'
+  zh: '看清本机每个软件在连哪些 host：通过本地 Clash/mihomo 还原域名，并给出精确到秒的首次/最近时间。'
+icon: https://raw.githubusercontent.com/<owner>/dsh-net-hosts/main/icon.png
+# 可选：没发 npm 时，用 GitHub Release 里的预构建包
+# tarball: https://github.com/<owner>/dsh-net-hosts/releases/latest/download/dsh-net-hosts.tgz

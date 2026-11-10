@@ -1,0 +1,14 @@
+# ============================================================================
+# dsh-net-hosts —— DSH bundle patch
+# ============================================================================
+# 插件挂载声明：DSH 启动时按 bundle 层栈叠加各插件 patch，
+# 本文件把「本机网络连接」面板插入 profile 的配置树。
+#
+# 安装（本地开发）：
+#   dsh plugin --profile web add link:<本目录绝对路径>
+# 或把本包加入 profile package.json 的 dependencies 与 dsh.profile.bundles。
+# ============================================================================
+
+- insert:
+    - id: dsh-net-hosts
+      name: dsh-net-hosts

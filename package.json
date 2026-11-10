@@ -1,0 +1,68 @@
+{
+  "name": "dsh-net-hosts",
+  "version": "0.4.0",
+  "description": "DSH 插件：看清本机每个软件在连哪些 host——实时读取 lsof 与本地代理连接表，按软件/连接/域名/监听浏览，带秒级首次与最近时间，并注册 net_connections 工具",
+  "keywords": [
+    "connections",
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "host",
+    "lsof",
+    "network",
+    "network-monitor"
+  ],
+  "type": "module",
+  "main": "lib/index.js",
+  "icon": "./icon.png",
+  "exports": {
+    ".": "./lib/index.js",
+    "./collect": "./lib/collect.js",
+    "./ui": "./lib/ui.js",
+    "./package.json": "./package.json",
+    "./client": "./lib/client.js"
+  },
+  "files": [
+    "lib",
+    "test",
+    "icon.png",
+    "cordis.patch.yml",
+    "README.md",
+    "INSTALL.md",
+    "LICENSE",
+    "install-desktop.command",
+    "docs",
+    "market-submission"
+  ],
+  "scripts": {
+    "test": "node --test test/collect.test.js test/proxy.test.js test/client.test.js test/plugin.test.js",
+    "prepublishOnly": "npm test"
+  },
+  "engines": {
+    "node": ">=20",
+    "dsh": ">=0.2.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": []
+    },
+    "manifestVersion": 1
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": "Arthas1in",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Arthas1in/dsh-net-hosts.git"
+  },
+  "homepage": "https://github.com/Arthas1in/dsh-net-hosts#readme",
+  "bugs": {
+    "url": "https://github.com/Arthas1in/dsh-net-hosts/issues"
+  }
+}
