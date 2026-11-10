@@ -90,7 +90,9 @@ test('classifyAddress 划分 loopback / lan / public', () => {
   assert.equal(classifyAddress('*'), 'wildcard')
 })
 
-test('collectSnapshot 读取真实 lsof 输出', async () => {
+const liveTest = process.platform === 'darwin' ? test : test.skip
+
+liveTest('collectSnapshot 读取真实 lsof 输出', async () => {
   resetCache()
   const snapshot = await collectSnapshot({ fresh: true, maxAgeMs: 0 })
   assert.equal(snapshot.ok, true)

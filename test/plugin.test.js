@@ -124,7 +124,9 @@ test('apply 注册路由、注入入口，并暴露默认导出', () => {
   assert.equal(harness.tapIndexFns[0](html), html)
 })
 
-test('api/snapshot 返回真实数据', async () => {
+const liveTest = process.platform === 'darwin' ? test : test.skip
+
+liveTest('api/snapshot 返回真实数据', async () => {
   const harness = createContext()
   apply(harness.ctx)
   const res = await call(harness, '/net-hosts/api/snapshot')
