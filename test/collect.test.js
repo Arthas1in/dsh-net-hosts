@@ -4,7 +4,9 @@ import test from 'node:test'
 import { ownerFromName,
   classifyAddress,
   collectSnapshot,
+  connectionKey,
   decodeLsofText,
+  diffConnections,
   parseEndpoint,
   parseLsofOutput,
   resetCache,
@@ -120,4 +122,62 @@ test('helper 进程归并回宿主 App', () => {
   assert.equal(fromPath.name, 'WorkBuddy')
   assert.equal(fromPath.helper, true)
   assert.equal(ownerFromName('Safari').helper, false)
+})
+
+function conn(over = {}) {
+  return {
+    id: 'TCP:100:192.0.2.10:51000:203.0.113.9:443:ESTABLISHED',
+    pid: 100,
+    process: 'DemoApp',
+    proto: 'TCP',
+    state: 'ESTABLISHED',
+    local: { addr: '192.0.2.10', port: 51000, wildcard: false },
+    remote: { addr: '203.0.113.9', port: 443, wildcard: false },
+    remoteScope: 'public',
+    hostname: 'example.com',
+    ownerName: 'DemoApp',
+    ownerKey: 'app:demoapp',
+    ...over,
+  }
+}
+
+test('connectionKey 不含 state，握手状态变化不会算成新连接', () => {
+  const syn = conn({ state: 'SYN_SENT', id: 'a' })
+  const established = conn({ state: 'ESTABLISHED', id: 'b' })
+  assert.equal(connectionKey(syn), connectionKey(established))
+  assert.equal(connectionKey({ proto: 'TCP', pid: 1, local: { addr: 'x', port: 1 }, remote: null }), '')
+})
+
+test('diffConnections 首帧只做基线，之后给出建立与断开事件', () => {
+  const first = diffConnections([conn()], null, 1700000000000)
+  assert.equal(first.events.length, 0, '基线不刷历史')
+  assert.equal(first.live.size, 1)
+
+  const opened = diffConnections([conn(), conn({ pid: 200, id: 'x', local: { addr: '192.0.2.10', port: 51001 } })], first.live, 1700000002000)
+  assert.equal(opened.events.length, 1)
+  assert.equal(opened.events[0].kind, 'open')
+  assert.equal(opened.events[0].ts, 1700000002000)
+  assert.equal(opened.events[0].pid, 200)
+  assert.equal(opened.live.size, 2)
+
+  const closed = diffConnections([conn()], opened.live, 1700000009000)
+  assert.equal(closed.events.length, 1)
+  const event = closed.events[0]
+  assert.equal(event.kind, 'close')
+  assert.equal(event.pid, 200)
+  assert.equal(event.ts, 1700000009000)
+  assert.equal(event.durationMs, 7000)
+  assert.equal(event.host, 'example.com')
+  assert.equal(closed.live.size, 1)
+})
+
+test('diffConnections 握手状态变化不产生事件，回环连接被跳过', () => {
+  const first = diffConnections([conn({ state: 'SYN_SENT' })], null, 1700000000000)
+  const same = diffConnections([conn({ state: 'ESTABLISHED' })], first.live, 1700000002000)
+  assert.equal(same.events.length, 0, '只是状态变了')
+
+  const loop = conn({ remote: { addr: '127.0.0.1', port: 7897 }, remoteScope: 'loopback', id: 'loop', pid: 300 })
+  const withLoop = diffConnections([conn({ state: 'ESTABLISHED' }), loop], same.live, 1700000004000)
+  assert.equal(withLoop.events.length, 0, '回环不进时间线')
+  assert.equal(withLoop.live.size, 1)
 })

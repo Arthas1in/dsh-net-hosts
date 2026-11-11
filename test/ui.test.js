@@ -35,12 +35,13 @@ function loadUI(storage) {
   // 仅测试用：把 IIFE 内部函数挂到 window。
   const patched = code.replace(
     'window.__DSH_NET_HOSTS_UI__ = { mount: mountPanel, mountLauncher }',
-    'window.__test_resolve = resolveSnapshotEvents; window.__test_view = createViewModel(); window.__DSH_NET_HOSTS_UI__ = { mount: mountPanel, mountLauncher }',
+    'window.__test_resolve = resolveSnapshotEvents; window.__test_view = createViewModel(); window.__test_help = { fmtDuration, connectionLife, connectionHistogram }; window.__DSH_NET_HOSTS_UI__ = { mount: mountPanel, mountLauncher }',
   )
   vm.runInContext(patched, sandbox)
   return {
     resolve: sandbox.window.__test_resolve,
     view: sandbox.window.__test_view,
+    help: sandbox.window.__test_help,
   }
 }
 
@@ -155,4 +156,40 @@ test('新版数据层自带 events 时，界面侧不覆盖', () => {
   resolve(data, view)
   assert.strictEqual(data.events, provided, '不得覆盖宿主提供的事件')
   assert.equal(data.events[0].ownerName, '精确归并')
+})
+
+test('持续时长按秒/分/小时/天分档，断开与仍在连的语义不同', () => {
+  const { help } = loadUI(makeStorage())
+  assert.equal(help.fmtDuration(0), '<1 秒')
+  assert.equal(help.fmtDuration(1200), '1 秒')
+  assert.equal(help.fmtDuration(65000), '1 分 5 秒')
+  assert.equal(help.fmtDuration(120000), '2 分')
+  assert.equal(help.fmtDuration(3600000), '1 小时')
+  assert.equal(help.fmtDuration(5400000), '1 小时 30 分')
+  assert.equal(help.fmtDuration(90000000), '1 天 1 小时')
+
+  const now = 1700000010000
+  const closed = help.connectionLife({ kind: 'close', ts: now - 9000, durationMs: 7000 }, now)
+  assert.equal(closed.ms, 7000)
+  assert.equal(closed.live, false)
+  const live = help.connectionLife({ kind: 'open', ts: now - 4000 }, now)
+  assert.equal(live.ms, 4000)
+  assert.equal(live.live, true)
+  assert.equal(help.connectionLife({ ts: now }, now), null, '旧事件没有时长信息')
+})
+
+test('一次轮询里同一连接既开又关时，时间线只留下断开后的时长', () => {
+  const { help } = loadUI(makeStorage())
+  const now = 1700000036000
+  const buckets = help.connectionHistogram([
+    { kind: 'open', ts: now - 1000 },
+    { kind: 'open', ts: now - 5000 },
+    { kind: 'close', ts: now - 2000, durationMs: 1000 },
+    { kind: 'open', ts: now - 7200000 },
+    { kind: 'open', ts: now - 40 * 3600000 },
+  ], now)
+  assert.equal(buckets.length, 12)
+  assert.equal(buckets.reduce((a, b) => a + b, 0), 3, '只统计最近 12 小时内的建立事件')
+  assert.equal(buckets[11], 2, '最近一小时内的两条')
+  assert.equal(buckets[9], 1, '两小时前的一条')
 })
