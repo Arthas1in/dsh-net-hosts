@@ -42,7 +42,9 @@ dsh plugin --profile web add link:~/dsh-plugins/dsh-net-hosts
 
 **在 desktop profile 里手动启用：** 把包加入 `~/.dsh/profiles/desktop/package.json` 的 `dependencies`，并把 `dsh-net-hosts` 追加到 `dsh.profile.bundles` 末尾，然后在 profile 的 `node_modules` 里放一个指向本目录的软链接。重启 DSH 后生效。
 
-安装后界面左下角会出现「网络」胶囊按钮（徽标显示当前已建立连接数），点击即可打开面板；也可以直接访问 `http://127.0.0.1:<dsh 端口>/net-hosts/` 使用独立页面。
+安装后，DSH 左侧栏「上下文洞察」下面会出现「**网络连接**」，点进去就是完整主页面；没有侧边栏入口时（老版本 DSH 或 web 版），左下角会出现「网络」胶囊按钮（徽标显示当前已建立连接数），点击即可打开面板。也可以直接访问 `http://127.0.0.1:<dsh 端口>/net-hosts/` 使用独立页面。
+
+**改了界面代码怎么生效：** 宿主每次都从磁盘读 `ui.js` 并带文件指纹，改完只需在页面上按一次 `⌘R`（Windows/Linux 为 `Ctrl+R`）刷新；面板也会在 45 秒内自动检测指纹并重载。只有改到 `lib/collect.js` / `lib/index.js` 这类宿主层代码时，才需要完全退出并重新打开 DSH（DSH 的 HMR 不替换已加载的 host 模块）。
 
 ## 模型工具
 
@@ -91,7 +93,7 @@ dsh plugin --profile web add link:~/dsh-plugins/dsh-net-hosts
 2. 过滤掉 ICMP/ICMPv6 等无端口协议，只保留 TCP/UDP；还原 lsof 对非 ASCII 进程名做的 `\xNN` 转义。
 3. 反向 DNS 解析对端地址：成功缓存 30 分钟、失败缓存 10 分钟，最多 6 个并发、单次 900ms 超时，**不阻塞快照**——第一次没解析出来就先显示地址，下一轮轮询补上主机名。
 4. 进程归并：优先跑 `ps -axo pid=,ppid=,comm=` 沿父进程找到所属 `.app`；`ps` 不可用或找不到时，退化为按进程名归并（`X Helper` → `X`、`com.apple.*` → 系统组件），代理连接还会用 Clash 上报的 `processPath` 兜底。
-5. 时间线：每轮快照对比连接 id 集合，新出现的连接记一条事件（跳过回环地址），内存里最多 400 条，重启插件清零。
+5. 时间线：每轮快照对比连接 id 集合，新出现的连接记一条事件（跳过回环地址），内存里最多 400 条，重启插件清零。若宿主主进程仍在跑旧版数据层（DSH 未重启、HMR 不替换 host 模块），界面会自己在 `sessionStorage` 里维护同一份事件：按 id 差集推导、按进程名兜底归并，`⌘R` 刷新页面不会清空；等重启 DSH 加载新版数据层后自动切换回更精确的 `ps` 归并，无需改配置。
 6. 时间：数据层维护一份 host 观察表，记录每个 host 第一次和最后一次出现的时刻（毫秒）；界面显示到秒，「软件」视图里展开一行就是一张 host × 时间的小表。这份时间从插件进程启动算起，重启 DSH 会重新计时。
 7. 若发现本地代理控制接口，拉 `GET /connections` 并按 `sourcePort` 合并域名（见上一节）；快照不等待它，第一次没拿到就先显示 IP，下一轮补上。
 8. 快照复用窗口 700ms，避免多个视图同时刷新时重复 fork `lsof`。
@@ -100,12 +102,12 @@ dsh plugin --profile web add link:~/dsh-plugins/dsh-net-hosts
 
 ```bash
 cd dsh-net-hosts
-node --test test/collect.test.js test/proxy.test.js test/plugin.test.js
+npm test
 ```
 
 - `lib/collect.js`：lsof 解析、地址分类、反向 DNS 缓存、快照组装、代理连接合并（纯数据层，可单独测试）。
 - `lib/proxy.js`：本地代理（Clash / mihomo）控制接口发现、`/connections` 归一化；配置、unix socket、常见端口三种发现方式，失败静默。
-- `lib/ui.js`：零依赖的 Shadow DOM 界面（软件 / 连接 / 主机 / 监听 四个视图，其中「软件」在客户端按进程聚合），暴露 `window.__DSH_NET_HOSTS_UI__.mount(target, { standalone })` 与 `.mountLauncher(host)`。
+- `lib/ui.js`：零依赖的 Shadow DOM 界面（软件 / 时间线 / 连接明细 / 域名·IP / 监听端口 五个视图，其中「软件」按进程聚合），暴露 `window.__DSH_NET_HOSTS_UI__.mount(target, { standalone, embedded })` 与 `.mountLauncher(host)`；内含兼容旧宿主的客户端事件推导与按名归并兜底。
 - `lib/index.js`：宿主插件，注册路由、注入入口、注册模型工具。
 - `lib/launcher.js`：页面内的悬浮入口，由宿主通过 `tapIndex`（HTTP 版）或 `webserver/index-inject`（桌面版）注入。
 
