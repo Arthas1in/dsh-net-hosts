@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import {
+import { ownerFromName,
   classifyAddress,
   collectSnapshot,
   decodeLsofText,
@@ -32,7 +32,7 @@ test('parseLsofOutput 解析连接 / 监听 / UDP，并过滤 ICMP', () => {
     'cSafari',
     'f12',
     'PTCP',
-    'n192.168.1.20:51766->93.184.216.34:443',
+    'n192.0.2.20:51766->203.0.113.34:443',
     'TST=ESTABLISHED',
     'f13',
     'PTCP',
@@ -65,8 +65,8 @@ test('parseLsofOutput 解析连接 / 监听 / UDP，并过滤 ICMP', () => {
     proto: 'TCP',
     state: 'ESTABLISHED',
     type: 'IPv4',
-    local: { addr: '192.168.1.20', port: 51766, wildcard: false },
-    remote: { addr: '93.184.216.34', port: 443, wildcard: false },
+    local: { addr: '192.0.2.20', port: 51766, wildcard: false },
+    remote: { addr: '203.0.113.34', port: 443, wildcard: false },
   })
   assert.equal(rows[2].proto, 'UDP')
   assert.equal(rows[2].state, null)
@@ -79,7 +79,7 @@ test('classifyAddress 划分 loopback / lan / public', () => {
   assert.equal(classifyAddress('127.0.0.1'), 'loopback')
   assert.equal(classifyAddress('::1'), 'loopback')
   assert.equal(classifyAddress('::ffff:127.0.0.1'), 'loopback')
-  assert.equal(classifyAddress('192.168.1.5'), 'lan')
+  assert.equal(classifyAddress('10.255.0.1'), 'lan')
   assert.equal(classifyAddress('10.0.0.8'), 'lan')
   assert.equal(classifyAddress('172.20.3.4'), 'lan')
   assert.equal(classifyAddress('100.64.0.1'), 'lan')
@@ -110,4 +110,14 @@ liveTest('collectSnapshot 读取真实 lsof 输出', async () => {
   for (const row of snapshot.rows) {
     if (row.state === 'LISTEN') assert.equal(row.remote, null)
   }
+})
+
+test('helper 进程归并回宿主 App', () => {
+  assert.equal(ownerFromName('Google Chrome Helper (Aperitif)').name, 'Google Chrome')
+  assert.equal(ownerFromName('极空间 Helper').name, '极空间')
+  assert.equal(ownerFromName('com.apple.WebKit.Networking').name, '系统组件')
+  const fromPath = ownerFromName('Electron', '/Applications/WorkBuddy.app/Contents/MacOS/WorkBuddy')
+  assert.equal(fromPath.name, 'WorkBuddy')
+  assert.equal(fromPath.helper, true)
+  assert.equal(ownerFromName('Safari').helper, false)
 })

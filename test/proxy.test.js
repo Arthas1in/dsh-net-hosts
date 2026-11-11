@@ -50,9 +50,9 @@ test('normalizeProxyConnections 只保留有 sourcePort 的连接，并丢弃 IP
       chains: ['Proxy', 42],
       metadata: {
         sourcePort: '51766',
-        sourceIP: '192.168.1.20',
-        host: 'www.xueqiu.com',
-        destinationIP: '111.124.200.12',
+        sourceIP: '192.0.2.20',
+        host: 'www.example.com',
+        destinationIP: '203.0.113.12',
         destinationPort: '443',
         inboundPort: '7897',
         network: 'tcp',
@@ -61,11 +61,11 @@ test('normalizeProxyConnections 只保留有 sourcePort 的连接，并丢弃 IP
     },
     {
       id: 'def',
-      metadata: { sourcePort: 51767, host: '111.124.200.12', destinationIP: '111.124.200.12', destinationPort: 443 },
+      metadata: { sourcePort: 51767, host: '203.0.113.12', destinationIP: '203.0.113.12', destinationPort: 443 },
     },
     {
       id: 'ghi',
-      metadata: { sourcePort: 51768, host: 'imap.qq.com', destinationIP: '', remoteDestination: '121.14.22.61', destinationPort: 993 },
+      metadata: { sourcePort: 51768, host: 'imap.example.com', destinationIP: '', remoteDestination: '203.0.113.61', destinationPort: 993 },
     },
     { id: 'bad' },
   ]
@@ -74,9 +74,9 @@ test('normalizeProxyConnections 只保留有 sourcePort 的连接，并丢弃 IP
   assert.deepEqual(out[0], {
     id: 'abc',
     sourcePort: 51766,
-    sourceIP: '192.168.1.20',
-    host: 'www.xueqiu.com',
-    destinationIP: '111.124.200.12',
+    sourceIP: '192.0.2.20',
+    host: 'www.example.com',
+    destinationIP: '203.0.113.12',
     destinationPort: 443,
     inboundPort: 7897,
     network: 'tcp',
@@ -87,8 +87,8 @@ test('normalizeProxyConnections 只保留有 sourcePort 的连接，并丢弃 IP
   // host 与 destinationIP 相同时视为没有域名，交给 PTR 兜底。
   assert.equal(out[1].host, '')
   // mihomo 的域名连接：destinationIP 为空，IP 在 remoteDestination 里。
-  assert.equal(out[2].destinationIP, '121.14.22.61')
-  assert.equal(out[2].host, 'imap.qq.com')
+  assert.equal(out[2].destinationIP, '203.0.113.61')
+  assert.equal(out[2].host, 'imap.example.com')
 })
 
 test('applyProxyTargets 用 sourcePort 把经代理的连接还原成域名', () => {
@@ -111,8 +111,8 @@ test('applyProxyTargets 用 sourcePort 把经代理的连接还原成域名', ()
     },
     {
       id: 'c',
-      local: { addr: '192.168.1.20', port: 51768, wildcard: false },
-      remote: { addr: '93.184.216.34', port: 443, wildcard: false },
+      local: { addr: '192.0.2.20', port: 51768, wildcard: false },
+      remote: { addr: '203.0.113.34', port: 443, wildcard: false },
       localScope: 'lan',
       remoteScope: 'public',
       hostname: 'example.com',
@@ -124,8 +124,8 @@ test('applyProxyTargets 用 sourcePort 把经代理的连接还原成域名', ()
     connections: [
       {
         sourcePort: 51766,
-        host: 'www.xueqiu.com',
-        destinationIP: '111.124.200.12',
+        host: 'www.example.com',
+        destinationIP: '203.0.113.12',
         destinationPort: 443,
         rule: 'Rule',
         chains: ['Proxy'],
@@ -137,9 +137,9 @@ test('applyProxyTargets 用 sourcePort 把经代理的连接还原成域名', ()
   assert.equal(applyProxyTargets(rows, proxy), 2)
 
   assert.equal(rows[0].viaProxy, true)
-  assert.equal(rows[0].hostname, 'www.xueqiu.com')
-  assert.equal(rows[0].domain, 'www.xueqiu.com')
-  assert.deepEqual(rows[0].target, { addr: '111.124.200.12', port: 443, host: 'www.xueqiu.com' })
+  assert.equal(rows[0].hostname, 'www.example.com')
+  assert.equal(rows[0].domain, 'www.example.com')
+  assert.deepEqual(rows[0].target, { addr: '203.0.113.12', port: 443, host: 'www.example.com' })
   assert.equal(rows[0].targetScope, 'public')
   assert.deepEqual(rows[0].proxy, { rule: 'Rule', chains: ['Proxy'], processPath: '' })
 
