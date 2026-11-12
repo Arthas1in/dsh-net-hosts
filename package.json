@@ -1,6 +1,6 @@
 {
   "name": "dsh-net-hosts",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "DSH 插件：看清本机每个软件在连哪些 host——实时读取 lsof 与本地代理连接表，按软件/连接/域名/监听浏览，带秒级首次与最近时间，并注册 net_connections 工具",
   "keywords": [
     "connections",
@@ -29,8 +29,7 @@
     "README.md",
     "INSTALL.md",
     "LICENSE",
-    "install-desktop.command",
-    "docs"
+    "install-desktop.command"
   ],
   "scripts": {
     "test": "node --test test/*.test.js",
