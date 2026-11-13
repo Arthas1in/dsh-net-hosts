@@ -34,6 +34,14 @@
 
 需要 DSH `>= 0.2.0`，macOS（依赖系统自带的 `lsof`）。
 
+**从 npm 安装（推荐，国内走镜像，约半秒）：**
+
+```bash
+dsh plugin --profile web add dsh-net-hosts
+```
+
+也可以在 DSH 插件市场里搜索 `dsh-net-hosts` 直接点安装。
+
 **本地开发安装（link）：**
 
 ```bash
