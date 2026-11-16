@@ -35,7 +35,7 @@ function loadUI(storage) {
   // 仅测试用：把 IIFE 内部函数挂到 window。
   const patched = code.replace(
     'window.__DSH_NET_HOSTS_UI__ = { mount: mountPanel, mountLauncher }',
-    'window.__test_resolve = resolveSnapshotEvents; window.__test_view = createViewModel(); window.__test_help = { fmtDuration, connectionLife, connectionHistogram }; window.__DSH_NET_HOSTS_UI__ = { mount: mountPanel, mountLauncher }',
+    'window.__test_resolve = resolveSnapshotEvents; window.__test_view = createViewModel(); window.__test_help = { fmtDuration, connectionLife, connectionHistogram, mergeRecentHosts }; window.__DSH_NET_HOSTS_UI__ = { mount: mountPanel, mountLauncher }',
   )
   vm.runInContext(patched, sandbox)
   return {
@@ -192,4 +192,34 @@ test('一次轮询里同一连接既开又关时，时间线只留下断开后�
   assert.equal(buckets.reduce((a, b) => a + b, 0), 3, '只统计最近 12 小时内的建立事件')
   assert.equal(buckets[11], 2, '最近一小时内的两条')
   assert.equal(buckets[9], 1, '两小时前的一条')
+})
+
+test('刚断开的 host 会留两分钟，超过时间才丢掉', () => {
+  const { help } = loadUI(makeStorage())
+  const now = 1700000000000
+  const first = help.mergeRecentHosts(new Map(), [
+    { appKey: 'app:chrome', host: 'github.com', count: 2, firstSeen: now - 5000, lastSeen: now, live: true },
+  ], now)
+  assert.equal(first.size, 1)
+  assert.equal(first.get('app:chrome\u0000github.com').live, true)
+
+  // 下一轮这个连接没了：标记成已断开，但仍然留着
+  const second = help.mergeRecentHosts(first, [], now + 30000)
+  const gone = second.get('app:chrome\u0000github.com')
+  assert.ok(gone, '断开 30 秒后仍在表里')
+  assert.equal(gone.live, false)
+  assert.equal(gone.firstSeen, now - 5000, '第一次出现的时间不被覆盖')
+  assert.equal(gone.lastSeen, now, '最后一次出现保持在断开那一刻')
+
+  // 超过 120 秒才真正消失
+  const third = help.mergeRecentHosts(second, [], now + 121000)
+  assert.equal(third.size, 0)
+
+  // 又连上时恢复 live，并且旧的最早时间继续沿用（仍在保留窗口内）
+  const fourth = help.mergeRecentHosts(second, [
+    { appKey: 'app:chrome', host: 'github.com', count: 1, firstSeen: now + 100000, lastSeen: now + 100000, live: true },
+  ], now + 100000)
+  const back = fourth.get('app:chrome\u0000github.com')
+  assert.equal(back.live, true)
+  assert.equal(back.firstSeen, now - 5000)
 })
