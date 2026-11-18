@@ -35,7 +35,7 @@ function loadUI(storage) {
   // 仅测试用：把 IIFE 内部函数挂到 window。
   const patched = code.replace(
     'window.__DSH_NET_HOSTS_UI__ = { mount: mountPanel }',
-    'window.__test_resolve = resolveSnapshotEvents; window.__test_view = createViewModel(); window.__test_help = { fmtDuration, connectionLife, connectionHistogram, mergeRecentHosts }; window.__DSH_NET_HOSTS_UI__ = { mount: mountPanel }',
+    'window.__test_resolve = resolveSnapshotEvents; window.__test_view = createViewModel(); window.__test_help = { fmtDuration, connectionLife, connectionHistogram, mergeRecentHosts, eventsToCsv }; window.__DSH_NET_HOSTS_UI__ = { mount: mountPanel }',
   )
   vm.runInContext(patched, sandbox)
   return {
@@ -222,4 +222,26 @@ test('刚断开的 host 会留两分钟，超过时间才丢掉', () => {
   const back = fourth.get('app:chrome\u0000github.com')
   assert.equal(back.live, true)
   assert.equal(back.firstSeen, now - 5000)
+})
+
+test('时间线导出 CSV：表头、转义与断开时长', () => {
+  const { help } = loadUI(makeStorage())
+  const ts = Date.UTC(2026, 10, 18, 9, 30, 0)
+  const csv = help.eventsToCsv([
+    {
+      kind: 'open', ts, host: 'api.example.com', addr: '203.0.113.7', port: 443,
+      process: 'Google Chrome Helper', ownerName: 'Google Chrome', pid: 4242, viaProxy: true,
+    },
+    {
+      kind: 'close', ts: ts + 1000, host: 'weird,host', addr: '198.51.100.9', port: 80,
+      process: 'curl', ownerName: 'curl', pid: 7, viaProxy: false, durationMs: 65000,
+    },
+  ])
+  const lines = csv.trimEnd().split('\n')
+  assert.equal(lines[0], '时间,类型,软件,进程,PID,域名/主机,远端地址,端口,走代理,持续(秒)')
+  assert.equal(lines.length, 3)
+  assert.ok(lines[1].startsWith('2026-11-18T09:30:00.000Z,建立,Google Chrome,Google Chrome Helper,4242,api.example.com,203.0.113.7,443,是,'))
+  // 含逗号的字段必须加引号
+  assert.ok(lines[2].includes('"weird,host"'), lines[2])
+  assert.ok(lines[2].endsWith(',65'), '断开事件带持续秒数')
 })
