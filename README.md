@@ -10,14 +10,14 @@
 
 面板在 DSH 左侧栏里（「上下文洞察」下面的一项「**网络连接**」），点进去就是一个完整主页面，默认打开「软件」视图，直接回答「**这台机器上哪个软件，在连哪些域名**」：
 
-![软件视图](docs/apps.png)
+![软件视图](https://raw.githubusercontent.com/Arthas1in/dsh-net-hosts/main/docs/apps.png)
 
 ## 能做什么
 
 - **软件**（默认）：每个 App 一行，在「域名」与「主机 / IP」两列分别列出它连过的域名和真实目的 IP（经本地代理的连接会还原出真实域名，单独高亮）；连接数、域名数、**最近活动（精确到秒）**、所在网络一目了然。Chrome / Electron / 钉钉这类会把网络交给 helper 进程的 App，会按进程路径归并回宿主 App（例如 `Google Chrome Helper` 归到 `Google Chrome`），无法归并的系统进程标为「系统组件」。点一行原地展开，能看到它连过的每个 host 第一次、最后一次出现的时刻，以及一条「查看全部连接」的入口。
 - **时间线**：记录连接的建立与断开，精确到秒，回答「刚才那一秒，哪个 App 连了哪个 host」。每条连接带**持续时长**——还在连的实时累加，断开时定格（例如 `12 分 05 秒`）；顶部还有一条**最近 12 小时**的新建连接分布，一眼看出哪段时间连得最密。插件启动后的第一份快照只做基线，之后最多保留 400 条；点一条可以跳到对应的连接明细。顶部还有**导出 CSV / JSON**（时间、类型、软件、进程、PID、域名、远端地址与端口、是否走代理、持续秒数）和「复制 host」——只在点下去的那一刻在浏览器里生成文件，不写盘、不上传。
 
-  ![时间线](docs/timeline.png)
+  ![时间线](https://raw.githubusercontent.com/Arthas1in/dsh-net-hosts/main/docs/timeline.png)
 - **关注**：点软件名后面的 ☆ 关注某个 App；它出现新域名时，面板会弹提示（授权后也会发系统通知）。
 - **连接明细**：每条 TCP/UDP 套接字一行，显示状态、进程/PID、本地 → 远端地址、主机名；经本地代理的连接会显示真实目标 IP:端口与域名，并带「代理」徽标。循环连接按 `pid + 四元组` 去重，重复的 fd 合并成 `fds`。展开一行可以看端口、代理规则/链路和该主机的首次/最近时间。
 - **域名·IP**：按对端聚合——连接数、已建立数、远端端口、涉及进程、首次/最近出现时间；经代理的连接按**域名**聚合，IP 收在副标题里。这是回答「这台机器总共在跟谁通信」最快的入口。
@@ -26,7 +26,7 @@
 - 搜索（软件、域名、地址、端口）、按网络范围筛选（公网 / 局域网 / 本机）、按 TCP/UDP 筛选、点表头排序、展开行看完整信息、一键复制地址。
 - **暂停**：面板右上角的 ⏸（或按 `P`，或点底部「自动刷新 · 2s」）把数据定格，顶部出现「已暂停 · 数据停在 14:52:16」；暂停状态会记住，下次打开仍是暂停。刷新时滚动位置和展开的行都不会跳。
 
-  ![已暂停](docs/paused.png)
+  ![已暂停](https://raw.githubusercontent.com/Arthas1in/dsh-net-hosts/main/docs/paused.png)
 - **复制**：表格里的文字可以直接拖选（选中不会触发行点击），每行末尾也有复制按钮，复制 host、IP 或整条地址。想一次拿走某个软件的全部 host？点这一行域名后面的图标，或展开后点「复制全部 host（N）」——一行一个，直接粘到别处。
 - **刚断开的不会立刻消失**：某个 App 下的 host 断开后会标「已断开」保留两分钟，配合暂停足够看清「它刚才在连什么」。
 - 2 秒自动刷新；页面隐藏时自动暂停；也可以手动暂停/刷新。
@@ -35,9 +35,9 @@
 
 | 连接视图 | 主机视图 |
 | --- | --- |
-| ![连接](docs/panel-light.png) | ![主机](docs/hosts.png) |
+| ![连接](https://raw.githubusercontent.com/Arthas1in/dsh-net-hosts/main/docs/panel-light.png) | ![主机](https://raw.githubusercontent.com/Arthas1in/dsh-net-hosts/main/docs/hosts.png) |
 
-暗色主题：[docs/panel-dark.png](docs/panel-dark.png)。
+暗色主题：[docs/panel-dark.png](https://raw.githubusercontent.com/Arthas1in/dsh-net-hosts/main/docs/panel-dark.png)。
 
 ## 安装
 
