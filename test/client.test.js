@@ -65,9 +65,9 @@ test('client bundle 注册侧边栏入口与主面板', () => {
   assert.equal(sidebar.component({ size: 16 }).type, 'svg')
   assert.equal(main.component().type, 'div')
 
-  // 通知悬浮胶囊让位
-  assert.equal(sandbox.window.__dshNetHostsNativePanel, true)
-  assert.deepEqual(events, ['dsh-net-hosts:native-panel'])
+  // 不再往页面里发任何「胶囊让位」事件；入口只有侧边栏。
+  assert.equal(sandbox.window.__dshNetHostsNativePanel, undefined)
+  assert.deepEqual(events, [])
 })
 
 test('package.json 声明了 web 客户端与 ./client 导出', () => {

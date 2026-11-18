@@ -34,8 +34,8 @@ function loadUI(storage) {
   const code = fs.readFileSync(new URL('../lib/ui.js', import.meta.url), 'utf8')
   // 仅测试用：把 IIFE 内部函数挂到 window。
   const patched = code.replace(
-    'window.__DSH_NET_HOSTS_UI__ = { mount: mountPanel, mountLauncher }',
-    'window.__test_resolve = resolveSnapshotEvents; window.__test_view = createViewModel(); window.__test_help = { fmtDuration, connectionLife, connectionHistogram, mergeRecentHosts }; window.__DSH_NET_HOSTS_UI__ = { mount: mountPanel, mountLauncher }',
+    'window.__DSH_NET_HOSTS_UI__ = { mount: mountPanel }',
+    'window.__test_resolve = resolveSnapshotEvents; window.__test_view = createViewModel(); window.__test_help = { fmtDuration, connectionLife, connectionHistogram, mergeRecentHosts }; window.__DSH_NET_HOSTS_UI__ = { mount: mountPanel }',
   )
   vm.runInContext(patched, sandbox)
   return {

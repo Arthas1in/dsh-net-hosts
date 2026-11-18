@@ -98,7 +98,7 @@ function call(harness, path, headers) {
   return Promise.resolve(route.handler(mockRequest({ url: path, headers }), res)).then(() => res)
 }
 
-test('apply 注册路由、注入入口，并暴露默认导出', () => {
+test('apply 注册路由，并暴露默认导出（不再往页面注入浮动入口）', () => {
   assert.equal(name, 'dsh-net-hosts')
   assert.equal(typeof applyDefault.apply, 'function')
 
@@ -106,22 +106,13 @@ test('apply 注册路由、注入入口，并暴露默认导出', () => {
   apply(harness.ctx)
 
   const paths = harness.routes.map((route) => route.path)
-  for (const expected of ['/net-hosts', '/net-hosts/', '/net-hosts/ui.js', '/net-hosts/launcher.js', '/net-hosts/api/snapshot', '/net-hosts/api/health']) {
+  for (const expected of ['/net-hosts', '/net-hosts/', '/net-hosts/ui.js', '/net-hosts/api/snapshot', '/net-hosts/api/health']) {
     assert.ok(paths.includes(expected), `missing ${expected}`)
   }
-  assert.equal(harness.indexInjectHandlers.length, 1)
-  assert.equal(harness.tapIndexFns.length, 1)
-
-  const table = []
-  harness.indexInjectHandlers[0](table)
-  assert.equal(table.length, 1)
-  assert.equal(table[0].kind, 'script')
-  assert.ok(table[0].text.includes('/net-hosts/launcher.js'))
-
-  const html = harness.tapIndexFns[0]('<html><body><div id="app"></div></body></html>')
-  assert.ok(html.includes('<script src="/net-hosts/launcher.js" async></script>'))
-  // 重复渲染不会重复注入
-  assert.equal(harness.tapIndexFns[0](html), html)
+  // 悬浮胶囊已移除：既没有 launcher.js 路由，也不注册任何页面注入。
+  assert.ok(!paths.includes('/net-hosts/launcher.js'), 'launcher 路由应当已经删除')
+  assert.equal(harness.indexInjectHandlers.length, 0)
+  assert.equal(harness.tapIndexFns.length, 0)
 })
 
 const liveTest = process.platform === 'darwin' ? test : test.skip
@@ -156,9 +147,6 @@ test('api/health 与独立页面、静态资源', async () => {
   assert.match(ui.headers['content-type'], /text\/javascript/)
   assert.ok(ui.body.includes('__DSH_NET_HOSTS_UI__'))
 
-  const launcher = await call(harness, '/net-hosts/launcher.js')
-  assert.equal(launcher.statusCode, 200)
-  assert.ok(launcher.body.includes('__dshNetHostsMounted'))
 })
 
 test('拒绝非回环 Host、跨站 Origin 与跨站 fetch', async () => {
@@ -201,6 +189,15 @@ test('注册 net_connections 工具并可执行', async () => {
 
   const filtered = await tool.execute({ scope: 'public', limit: 2 })
   assert.match(filtered, /^共 \d+ 个套接字/)
+
+  // redact: 进程(PID) 列变成占位符
+  assert.equal(tool.parameters.properties.redact.type, 'boolean')
+  const masked = await tool.execute({ state: 'listening', limit: 3, redact: true })
+  assert.match(masked, /个套接字/)
+  if (!/没有匹配的连接/.test(masked)) {
+    assert.ok(!/\(\d+\)/.test(masked), `redact 不应出现 PID：${masked}`)
+    assert.match(masked, /  —  TCP|  —  UDP/)
+  }
 
   const content = tool.output.render({}, text)
   assert.equal(content[0].type, 'text')

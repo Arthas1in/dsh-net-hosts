@@ -2,7 +2,7 @@
 
 查看本机网络连接与对端主机的 DSH 插件。
 
-它把 `lsof -i` 的套接字表整理成两件事：一个随时可以点开的**实时面板**，和一个给 Agent 用的 **`net_connections` 工具**。整个插件只读——不建立连接、不修改配置、不发任何数据到外部。
+它把 `lsof -i` 的套接字表整理成两件事：一个随时可以点开的**实时面板**，和一个给 Agent 用的 **`net_connections` 工具**。整个插件只读——不建立连接、不修改配置、没有遥测。数据默认只留在本机内存里（唯一的例外是模型工具，见下面的「隐私」一节）。
 
 面板在 DSH 左侧栏里（「上下文洞察」下面的一项「**网络连接**」），点进去就是一个完整主页面，默认打开「软件」视图，直接回答「**这台机器上哪个软件，在连哪些域名**」：
 
@@ -24,7 +24,7 @@
 - **复制**：表格里的文字可以直接拖选（选中不会触发行点击），每行末尾也有复制按钮，复制 host、IP 或整条地址。想一次拿走某个软件的全部 host？点这一行域名后面的图标，或展开后点「复制全部 host（N）」——一行一个，直接粘到别处。
 - **刚断开的不会立刻消失**：某个 App 下的 host 断开后会标「已断开」保留两分钟，配合暂停足够看清「它刚才在连什么」。
 - 2 秒自动刷新；页面隐藏时自动暂停；也可以手动暂停/刷新。
-- 侧边栏入口是主路径；悬浮胶囊只在没有侧边栏入口时出现（也可用 `⌘⇧N` 直接打开）。胶囊可以**拖动**到任意位置（位置记在 `localStorage`）；胶囊右上角一直有一个 ×，点它隐藏入口，或者点开面板后用底部的「隐藏入口」。隐藏后左下角会弹出一个 20 秒的「网络入口已隐藏 · 恢复」提示，点恢复即可；随时按 `⌘⇧N`（Windows/Linux 为 `Ctrl+Shift+N`）也能直接打开面板并恢复入口。隐藏不会持久化，刷新页面入口仍在原位置。
+- 入口只有**侧边栏**一个：DSH 左侧栏的「网络连接」，点开就是完整主页面。插件不往页面里注入任何浮动按钮，也不会挡到别的东西。
 - 亮色/暗色跟随系统；界面用 Shadow DOM 隔离，不会和 DSH 的样式互相污染。
 
 | 连接视图 | 主机视图 |
@@ -53,7 +53,7 @@ dsh plugin --profile web add link:~/dsh-plugins/dsh-net-hosts
 
 **在 desktop profile 里手动启用：** 把包加入 `~/.dsh/profiles/desktop/package.json` 的 `dependencies`，并把 `dsh-net-hosts` 追加到 `dsh.profile.bundles` 末尾，然后在 profile 的 `node_modules` 里放一个指向本目录的软链接。重启 DSH 后生效。
 
-安装后，DSH 左侧栏「上下文洞察」下面会出现「**网络连接**」，点进去就是完整主页面；没有侧边栏入口时（老版本 DSH 或 web 版），左下角会出现「网络」胶囊按钮（徽标显示当前已建立连接数），点击即可打开面板。也可以直接访问 `http://127.0.0.1:<dsh 端口>/net-hosts/` 使用独立页面。
+安装后，DSH 左侧栏「上下文洞察」下面会出现「**网络连接**」，点进去就是完整主页面。也可以直接访问 `http://127.0.0.1:<dsh 端口>/net-hosts/` 使用独立页面。
 
 **改了界面代码怎么生效：** 宿主每次都从磁盘读 `ui.js` 并带文件指纹，改完只需在页面上按一次 `⌘R`（Windows/Linux 为 `Ctrl+R`）刷新；面板也会在 45 秒内自动检测指纹并重载。只有改到 `lib/collect.js` / `lib/index.js` 这类宿主层代码时，才需要完全退出并重新打开 DSH（DSH 的 HMR 不替换已加载的 host 模块）。
 
@@ -66,6 +66,7 @@ dsh plugin --profile web add link:~/dsh-plugins/dsh-net-hosts
 | `state` | string | `all`（默认）/ `established` / `listening` |
 | `scope` | string | `all`（默认）/ `public` / `lan` / `loopback`，按远端地址归类 |
 | `limit` | number | 最多返回多少条，默认 40，上限 200 |
+| `redact` | boolean | `true` 时隐去进程名与 PID，只留地址与主机名（不想向模型暴露「本机装了哪些软件」时用） |
 
 返回一段文本表（摘要 + 逐行 `状态 进程(PID) 协议 本地 -> 远端 主机名`）。工具定义是手写的（只依赖 `tools.register` 的公开契约），不依赖 `@deepseek-ai/dsh-tools` 的裸包名解析，所以装在任意目录都能注册；万一注册失败只写 debug 日志，面板不受影响。
 
@@ -77,7 +78,6 @@ dsh plugin --profile web add link:~/dsh-plugins/dsh-net-hosts
 | --- | --- |
 | `/net-hosts/` | 独立页面（Shadow DOM 渲染） |
 | `/net-hosts/ui.js` | 面板脚本 |
-| `/net-hosts/launcher.js` | 悬浮入口脚本（宿主注入） |
 | `/net-hosts/api/snapshot` | 快照 JSON；`?fresh=1` 跳过 700ms 复用窗口 |
 | `/net-hosts/api/health` | `{ ok, name, version }` |
 
@@ -118,13 +118,38 @@ npm test
 
 - `lib/collect.js`：lsof 解析、地址分类、反向 DNS 缓存、快照组装、代理连接合并（纯数据层，可单独测试）。
 - `lib/proxy.js`：本地代理（Clash / mihomo）控制接口发现、`/connections` 归一化；配置、unix socket、常见端口三种发现方式，失败静默。
-- `lib/ui.js`：零依赖的 Shadow DOM 界面（软件 / 时间线 / 连接明细 / 域名·IP / 监听端口 五个视图，其中「软件」按进程聚合），暴露 `window.__DSH_NET_HOSTS_UI__.mount(target, { standalone, embedded })` 与 `.mountLauncher(host)`；内含兼容旧宿主的客户端事件推导与按名归并兜底。
+- `lib/client.js`：client bundle，向 DSH 注册侧边栏项与主区域面板。
+- `lib/ui.js`：零依赖的 Shadow DOM 界面（软件 / 时间线 / 连接明细 / 域名·IP / 监听端口 五个视图，其中「软件」按进程聚合），暴露 `window.__DSH_NET_HOSTS_UI__.mount(target, { standalone, embedded })`；内含兼容旧宿主的客户端事件推导与按名归并兜底。
 - `lib/index.js`：宿主插件，注册路由、注入入口、注册模型工具。
-- `lib/launcher.js`：页面内的悬浮入口，由宿主通过 `tapIndex`（HTTP 版）或 `webserver/index-inject`（桌面版）注入。
 
 ## 上架 dsh-market
 
 dsh-market 的列表来自 [awesome-dsh-plugin](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin)：发布到 npm、再给列表提一条 `data/plugins/<owner>__dsh-net-hosts.yml`，市场里就能搜到并一键安装/更新。完整步骤见 [PUBLISH.md](PUBLISH.md)，条目模板见 [market-entry.yml](market-entry.yml)。
+
+## 隐私
+
+这个插件能看到的东西相当敏感（你装了哪些 App、它们在连谁），所以把「读什么、写什么、往外发什么」讲清楚。
+
+**读什么**
+
+- `lsof -i` 的套接字表：状态、进程名与 PID、本地/远端地址。
+- 本机 Clash/mihomo 的 HTTP 控制接口（`127.0.0.1` 或 unix socket），用来把「`127.0.0.1:7897`」还原成真实域名。
+- 系统解析器做反向 DNS（`dns.reverse`），把 IP 换成主机名——走你自己的 DNS 配置。
+
+**不做的**
+
+- 没有遥测、没有统计上报、没有远程配置拉取。
+- 不写日志、不落盘：连接事件只在内存里（最多 400 条，重启清零）。
+- HTTP 接口只有同源只读 GET；Host 必须是回环地址、拒绝跨站请求；快照接口还被 DSH 自身的鉴权挡在前面。
+- 插件不往页面里注入任何浮动元素，也不改 DSH 的其它配置。
+
+**唯一离开本机的一条路径：模型工具**
+
+会话里调用 `net_connections` 时，工具返回值（进程名、PID、地址、主机名）会交给**当前会话配置的模型**。这不是插件偷偷外传，但确实离开了本机。不想让模型看到「本机装了哪些软件」，就加 `redact: true`：进程名与 PID 会被隐去，只留地址与主机名。
+
+**仓库里的截图**
+
+`docs/` 下的示意图全部是合成数据：主机名 `demo-mac`、域名 `example.com`、地址用 `203.0.113.x` / `192.0.2.x` 这类 RFC 5737 文档保留段，应用名也是假的。截图不随 npm 包发布（`files` 白名单里没有 `docs`）。
 
 ## 限制
 
