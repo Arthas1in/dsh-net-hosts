@@ -1,5 +1,9 @@
 # dsh-net-hosts
 
+[![npm](https://img.shields.io/npm/v/dsh-net-hosts.svg)](https://www.npmjs.com/package/dsh-net-hosts)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![platform](https://img.shields.io/badge/platform-macOS-lightgrey.svg)](#安装)
+
 查看本机网络连接与对端主机的 DSH 插件。
 
 它把 `lsof -i` 的套接字表整理成两件事：一个随时可以点开的**实时面板**，和一个给 Agent 用的 **`net_connections` 工具**。整个插件只读——不建立连接、不修改配置、没有遥测。数据默认只留在本机内存里（唯一的例外是模型工具，见下面的「隐私」一节）。
@@ -21,6 +25,8 @@
 - 每个视图上方都有一句话解释它和别的视图的区别，不用记概念。
 - 搜索（软件、域名、地址、端口）、按网络范围筛选（公网 / 局域网 / 本机）、按 TCP/UDP 筛选、点表头排序、展开行看完整信息、一键复制地址。
 - **暂停**：面板右上角的 ⏸（或按 `P`，或点底部「自动刷新 · 2s」）把数据定格，顶部出现「已暂停 · 数据停在 14:52:16」；暂停状态会记住，下次打开仍是暂停。刷新时滚动位置和展开的行都不会跳。
+
+  ![已暂停](docs/paused.png)
 - **复制**：表格里的文字可以直接拖选（选中不会触发行点击），每行末尾也有复制按钮，复制 host、IP 或整条地址。想一次拿走某个软件的全部 host？点这一行域名后面的图标，或展开后点「复制全部 host（N）」——一行一个，直接粘到别处。
 - **刚断开的不会立刻消失**：某个 App 下的 host 断开后会标「已断开」保留两分钟，配合暂停足够看清「它刚才在连什么」。
 - 2 秒自动刷新；页面隐藏时自动暂停；也可以手动暂停/刷新。
@@ -79,7 +85,7 @@ dsh plugin --profile web add link:~/dsh-plugins/dsh-net-hosts
 | `/net-hosts/` | 独立页面（Shadow DOM 渲染） |
 | `/net-hosts/ui.js` | 面板脚本 |
 | `/net-hosts/api/snapshot` | 快照 JSON；`?fresh=1` 跳过 700ms 复用窗口 |
-| `/net-hosts/api/health` | `{ ok, name, version }` |
+| `/net-hosts/api/health` | `{ ok, name, version, ui }`（`ui` 是 `ui.js` 的指纹，界面据此自动重载） |
 
 鉴权由插件自己做：Host 必须是回环地址（或 `DSH_NET_HOSTS_TRUSTED_HOSTS` / `DSHW_TRUSTED_HOSTS` 里列出的主机）、拒绝 `Sec-Fetch-Site: cross-site`、Origin 必须与 Host 一致，异常一律按拒绝处理（fail-closed）；存在 `connection` 服务时再叠加它的 `requestRejection`。403 时不返回任何内容。
 
@@ -120,7 +126,16 @@ npm test
 - `lib/proxy.js`：本地代理（Clash / mihomo）控制接口发现、`/connections` 归一化；配置、unix socket、常见端口三种发现方式，失败静默。
 - `lib/client.js`：client bundle，向 DSH 注册侧边栏项与主区域面板。
 - `lib/ui.js`：零依赖的 Shadow DOM 界面（软件 / 时间线 / 连接明细 / 域名·IP / 监听端口 五个视图，其中「软件」按进程聚合），暴露 `window.__DSH_NET_HOSTS_UI__.mount(target, { standalone, embedded })`；内含兼容旧宿主的客户端事件推导与按名归并兜底。
-- `lib/index.js`：宿主插件，注册路由、注入入口、注册模型工具。
+- `lib/index.js`：宿主插件，注册 HTTP 路由、注册模型工具、把 client bundle 接进侧边栏。
+
+## 最近更新
+
+- **0.7.1**：时间线可以导出 CSV / JSON，也能一键复制全部 host；暂停后副标题立刻显示「数据停在 …」。
+- **0.7.0**：去掉页面里的悬浮胶囊，入口只保留侧边栏；`net_connections` 增加 `redact`，可以只把地址交给模型；README 补「隐私」一节。
+- **0.6.4**：一次复制某个软件下的全部 host；修掉行尾复制图标被压成 6px 的问题。
+- **0.6.3**：内嵌在侧边栏时 `P` 键才真正生效（以前只有弹窗模式注册了键盘监听）。
+- **0.6.2**：暂停可记住、表格文字可拖选、刚断开的 host 保留两分钟、刷新不再跳。
+- **0.6.0**：时间线加「持续」时长与最近 12 小时分布。
 
 ## 上架 dsh-market
 
